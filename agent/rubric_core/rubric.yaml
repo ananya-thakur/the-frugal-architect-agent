@@ -1,0 +1,380 @@
+version: "1.0"
+attribution: "The 7 Laws of Frugal Architecture by Werner Vogels / The Frugal Architect (https://thefrugalarchitect.com/laws/)"
+
+laws:
+  - number: 1
+    title: "Make Cost a Non-Functional Requirement"
+    description: >
+      Cost is as critical as performance, reliability, and security. Frugal architects
+      treat cost as a first-class non-functional requirement (NFR) at design time — not
+      an afterthought during an overrun. Every architectural decision has a cost dimension:
+      choice of service, data transfer, storage tier, compute shape, and API call volume
+      all translate directly to spend. Systems built without cost NFRs tend to grow
+      indefinitely in spend, making them difficult or impossible to sustain. Business
+      viability requires that revenue exceed costs; architecture that ignores this
+      relationship risks the survival of the business itself.
+    strong_looks_like: >
+      Cost targets and budgets are defined per component/service before a feature ships.
+      Cost is tracked in the Definition of Done alongside latency and error-rate SLOs.
+      Architecture Decision Records (ADRs) document the cost dimension of major choices.
+      AWS Cost Allocation Tags are applied consistently so spend can be attributed to
+      features and teams. A "cost budget exceeded" alert fires before monthly surprises appear.
+    probing_questions:
+      - "Is cost treated as a first-class non-functional requirement alongside performance and reliability in this architecture?"
+      - "Are cost targets or budgets defined for this system or its major components?"
+      - "Are AWS Cost Allocation Tags applied consistently so spend can be attributed to features, services, and teams?"
+      - "Do Architecture Decision Records (ADRs) document the cost dimension of major design choices?"
+    v2_verifiable_signals:
+      - "AWS Budgets: confirm at least one budget alert is configured for this workload"
+      - "AWS Cost Explorer: verify cost allocation tags are present on resources"
+
+  - number: 2
+    title: "Systems That Are Cost-Aware Are Systems That Can Be Optimized"
+    description: >
+      You cannot optimize what you cannot measure. Cost-aware systems instrument their
+      components to correlate workload metrics with spend — enabling teams to identify
+      where the cost is coming from and where improvements have the highest ROI.
+      Cost-awareness requires visibility at the right granularity: per-API, per-feature,
+      per-customer tier, or per-data-flow. Without this granularity, teams optimize
+      globally but miss the hot paths that drive 80% of the bill. The business and revenue
+      context is essential: a component that costs $10,000/month is frugal if it generates
+      $1,000,000 in revenue, and catastrophically un-frugal if the product is still
+      pre-revenue. Cost per unit of value (cost per transaction, cost per active user,
+      cost per API call) is the true frugality metric.
+    strong_looks_like: >
+      Cost-per-unit metrics (cost per request, cost per user, cost per transaction) are
+      published to a dashboard alongside throughput. AWS Cost Explorer or third-party
+      tooling shows cost broken down by service, feature, or team. Anomaly detection
+      alerts on unexpected cost spikes. The team can answer "what does this feature cost
+      per month?" without a multi-day investigation. Business value metrics (revenue,
+      engagement) are available alongside cost metrics so the ratio can be tracked.
+    probing_questions:
+      - "What is the expected business value or revenue this system generates? Understanding the cost-to-value ratio is essential for Law II scoring — please describe the revenue model or business metric this system serves."
+      - "Are cost-per-unit metrics (e.g. cost per request, cost per active user) tracked and visible to the engineering team?"
+      - "Is there a cost dashboard or Cost Explorer view that breaks down spend by service, feature, or team for this workload?"
+      - "Is AWS Cost Anomaly Detection or equivalent alerting configured to catch unexpected cost spikes?"
+    v2_verifiable_signals:
+      - "AWS Cost Explorer: verify cost is broken down by tag or service at feature granularity"
+      - "AWS Cost Anomaly Detection: confirm at least one monitor is active for this workload"
+
+  - number: 3
+    title: "Architecting is a Series of Trade-offs"
+    description: >
+      Every architectural choice involves trade-offs, and cost is always one of the axes.
+      Frugal architects make trade-offs explicit and document the cost dimension alongside
+      the technical dimensions. Choosing managed services over self-managed trades
+      operational burden for service pricing. Choosing synchronous processing over
+      async queuing trades latency for simplicity but may increase per-request compute
+      cost. Over-provisioning for headroom trades reliability for wasted spend. Under
+      the Frugal Architecture lens, the correct trade-off is not always the cheapest
+      choice — it is the choice whose cost is justified by the value it delivers, with
+      the cost implications understood and accepted rather than invisible.
+    strong_looks_like: >
+      ADRs record the cost dimension of significant design choices (e.g. "Lambda vs.
+      ECS: at current request volume Lambda is 40% cheaper; we revisit at 10x scale").
+      Managed vs. self-managed decisions document the cost of the operational overhead
+      alternative. Over-provisioning decisions reference a load-test–derived headroom
+      figure. The team can articulate why each major service was chosen relative to
+      cheaper alternatives and what trade-offs were consciously accepted.
+    probing_questions:
+      - "Are trade-off decisions documented with their cost implications (e.g. in ADRs or design docs)?"
+      - "Were cheaper architectural alternatives explicitly evaluated for major design choices, and was the cost difference understood?"
+      - "Is over-provisioning (extra capacity, redundant instances) justified with a documented headroom target or reliability requirement?"
+      - "For managed services chosen over self-managed alternatives, is the cost of operational overhead factored into the comparison?"
+    v2_verifiable_signals:
+      - "AWS Compute Optimizer: check for right-sizing recommendations indicating over-provisioning"
+      - "AWS Trusted Advisor: review cost-optimization checks for idle or under-utilized resources"
+
+  - number: 4
+    title: "Unobserved Systems Lead to Unknown Costs"
+    description: >
+      Without observability, cost growth is invisible. Systems that lack distributed
+      tracing, meaningful metrics, and structured logs cannot be correlated with spend —
+      making it impossible to identify which component, which customer, or which code
+      path is driving the bill. Unobserved systems accumulate technical debt and cost
+      debt simultaneously: bugs go undetected, inefficient paths are never profiled,
+      and runaway processes are discovered only on the monthly invoice. Observability
+      is the prerequisite for cost control: you must be able to answer "what happened
+      and what did it cost?" for every significant workload event.
+    strong_looks_like: >
+      Distributed tracing (AWS X-Ray or equivalent) is enabled and traces are retained
+      for cost-relevant paths. Structured logs include request ID, tenant ID, and
+      operation cost metadata so expensive calls can be searched. Key metrics (invocation
+      count, duration, error rate, data volume) are published to CloudWatch or equivalent
+      and dashboards exist for the production workload. An on-call engineer can correlate
+      a cost spike to a specific service, API endpoint, or event type within minutes.
+      OTEL spans or equivalent capture per-invocation cost estimates for the agent itself.
+    probing_questions:
+      - "Is distributed tracing (e.g. AWS X-Ray, OTEL) enabled for this system so requests can be followed end-to-end?"
+      - "Do logs include structured fields (request ID, tenant, operation) that allow correlation between a cost spike and a specific code path?"
+      - "Are key metrics (invocation count, duration, error rate, data transfer) published to a monitoring dashboard visible to the engineering team?"
+      - "Can an on-call engineer identify the source of a cost anomaly within minutes using the available observability tooling?"
+    v2_verifiable_signals:
+      - "AWS X-Ray: confirm tracing is enabled and sampling rate is set for production traffic"
+      - "CloudWatch Logs Insights: verify structured log fields include request correlation IDs"
+
+  - number: 5
+    title: "Cost-Aware Architectures Implement Cost Controls"
+    description: >
+      Visibility alone is not enough — frugal architectures implement technical controls
+      that prevent costs from running away unchecked. Cost controls include: API rate
+      limits and throttling to prevent denial-of-wallet attacks; circuit breakers on
+      expensive external calls; pagination and result-set size limits to prevent
+      unbounded data fetches; budget alerts that trigger automated responses (scale-in,
+      feature flags, notification); and retry policies with exponential backoff and jitter
+      to avoid thundering herds. Cost controls are built into the architecture from the
+      start, not bolted on after the first overrun. Missing controls are cost-time bombs:
+      a single missing pagination limit or an uncapped retry loop can cause a month's
+      budget to be spent in an hour.
+    strong_looks_like: >
+      Every public and internal API has a rate limit or throttle enforced at the gateway
+      or service layer. Data-fetch operations have explicit page-size limits (no unbounded
+      queries). Retry policies use exponential backoff with jitter and have a maximum
+      attempt count. Budget alerts are connected to automated responses (Lambda function,
+      runbook, feature flag) not just email notifications. Cost anomaly detection has
+      a defined response playbook. DynamoDB and other data stores have on-demand or
+      capacity-based safeguards against unbounded scan costs.
+    probing_questions:
+      - "Do all data-fetch operations (database queries, S3 lists, API calls) have explicit page-size or result-set limits?"
+      - "Are retry policies bounded with a maximum attempt count and exponential backoff with jitter?"
+      - "Are rate limits or throttles enforced on APIs to prevent denial-of-wallet attacks?"
+      - "Are budget alerts connected to an automated or documented response action (not just an email)?"
+    v2_verifiable_signals:
+      - "AWS Budgets: verify alert actions are configured (SNS, Lambda, or SSM) not just notifications"
+      - "API Gateway: confirm usage plans and throttling are configured for public API methods"
+
+  - number: 6
+    title: "Cost Optimization is Incremental"
+    description: >
+      Frugality is a habit, not a project. Large-scale rewrites to "fix cost" rarely
+      deliver the expected ROI and carry high execution risk. Instead, frugal architects
+      pursue continuous, incremental optimization: identify the top cost driver each
+      sprint, apply the smallest viable improvement, measure the impact, and repeat.
+      This compounds over time: a 5% improvement per sprint becomes a 30–40% annual
+      reduction without any single dramatic change. Incremental optimization also reduces
+      the risk of breaking working systems in the pursuit of efficiency. Prioritize by
+      impact × ease: the highest-value, lowest-effort improvements first.
+    strong_looks_like: >
+      A visible cost-optimization backlog exists and is groomed alongside the feature
+      backlog. Cost improvements ship in small, independently verifiable increments.
+      Each optimization is measured before and after to confirm the impact. The team
+      has a regular cadence (weekly or per-sprint) of reviewing the cost dashboard and
+      identifying the next incremental improvement. Major re-architectures for cost are
+      only pursued when incremental improvements are exhausted or the magnitude of the
+      inefficiency justifies the risk.
+    probing_questions:
+      - "Is there a cost-optimization backlog that is reviewed and prioritized alongside feature work?"
+      - "Are cost improvements shipped in small, independently measurable increments rather than large rewrites?"
+      - "Is there a regular cadence (sprint, weekly) for reviewing the cost dashboard and identifying the next optimization?"
+      - "Are optimizations prioritized by impact × ease so the highest-value, lowest-effort improvements are addressed first?"
+    v2_verifiable_signals:
+      - "AWS Cost Explorer: compare cost trends week-over-week to detect incremental improvements"
+      - "AWS Compute Optimizer: verify recommendations are actioned incrementally over time"
+
+  - number: 7
+    title: "Unchallenged Success Leads to Assumptions"
+    description: >
+      Growing systems develop hidden costs and architectural technical debt. An architecture
+      that was frugal at 100 users/day may be catastrophically expensive at 100,000 users/day
+      due to assumptions baked in at design time: fixed-size connection pools, eager data
+      loads, synchronous fanout, hardcoded batch sizes. These assumptions go unchallenged
+      because the system "works" — until it doesn't. Frugal architects regularly revisit
+      and challenge their assumptions: load tests, chaos experiments, and architectural
+      reviews expose the hidden costs of scale. The most dangerous architecture is one
+      that has never been stress-tested at current scale with current cost data.
+    strong_looks_like: >
+      Load tests are run at least quarterly at the expected peak-times-two traffic level
+      and cost data is captured during the test. Architectural assumptions are documented
+      (e.g. "this assumes <100 concurrent connections") and have a defined review date.
+      Post-incident reviews include a cost dimension: "what did this incident cost?"
+      The team can articulate the scale boundaries of the current architecture and has
+      a plan for what happens when the next order-of-magnitude growth occurs. At least
+      one architectural review per year explicitly asks "what would we build differently
+      if we started today?"
+    probing_questions:
+      - "When was the last time architectural assumptions were explicitly revisited at current scale and load?"
+      - "Are load tests run regularly at peak-times-two traffic, with cost data captured during the test?"
+      - "Are there documented scale boundaries for the current architecture (e.g. max concurrent connections, max payload size)?"
+      - "Do post-incident reviews include a cost dimension — 'what did this incident cost to the business'?"
+    v2_verifiable_signals:
+      - "AWS Compute Optimizer: check for over-provisioned resources that indicate assumptions no longer hold"
+      - "AWS Cost Explorer: identify cost trend inflection points that may signal assumption failures at scale"
+
+anti_pattern_signals:
+  - id: "n-plus-one-queries"
+    name: "N+1 Queries"
+    description: >
+      Code that executes one database or API query per item in a collection,
+      resulting in O(N) round trips instead of a single batched fetch. At low
+      volume this appears cheap; at scale it drives exponential latency and cost.
+      A list endpoint that returns 100 items but executes 101 database calls is a
+      classic example. This directly violates Law I (cost is a NFR) and Law V
+      (no cost controls on query volume).
+    matching_criteria: >
+      Look for ORM calls (e.g. .get(), .find(), .fetch()) inside loops (for, while,
+      list comprehensions, .map()). Also look for patterns like 'for item in items:
+      db.query(...)' or sequential awaits on individual record fetches where a
+      batch API exists. Flag any database/API call inside a loop body.
+    related_laws: [1, 5]
+
+  - id: "missing-pagination"
+    name: "Missing Pagination"
+    description: >
+      Data-fetch operations that return or process unbounded result sets without
+      enforcing a page size or result limit. A single call that returns all records
+      from a table can exhaust memory, incur massive read capacity costs, and produce
+      latency spikes at scale. DynamoDB Scan with no Limit, S3 ListObjects without
+      a MaxKeys cap, and SQL SELECT without LIMIT/FETCH are common manifestations.
+    matching_criteria: >
+      Look for: DynamoDB Scan/Query calls without Limit parameter; S3 list_objects
+      without MaxKeys; SQL SELECT statements without LIMIT/FETCH FIRST/TOP clause;
+      ORM .all() or .find_all() without pagination arguments; list/array operations
+      that load entire collections before filtering. Also flag API handler code that
+      returns all records without a page_size or limit parameter in the request.
+    related_laws: [1, 5]
+
+  - id: "full-table-scans"
+    name: "Full-Table Scans"
+    description: >
+      Database queries that read every row in a table rather than using an index,
+      incurring read costs proportional to table size rather than result size.
+      DynamoDB Scan operations, SQL queries on unindexed columns, and MongoDB
+      collection.find() without an index-backed filter are examples. At scale, a
+      full-table scan can cost hundreds of dollars per execution and degrade
+      throughput for concurrent users.
+    matching_criteria: >
+      Look for: DynamoDB 'Scan' operations (boto3 table.scan() or client.scan());
+      SQL queries with WHERE clause filtering on non-indexed columns (requires schema
+      context — flag queries on columns not in CREATE INDEX statements nearby);
+      MongoDB find() or aggregate() calls with filter fields unlikely to be indexed
+      ($regex anchored at non-start, $where). Flag all DynamoDB Scan calls as high
+      confidence; SQL and MongoDB require context to confirm.
+    related_laws: [1, 5]
+
+  - id: "polling-instead-of-events"
+    name: "Polling Instead of Events"
+    description: >
+      Code that repeatedly checks for state changes on a fixed interval rather than
+      consuming event notifications. Polling incurs continuous API or database call
+      costs regardless of whether anything changed — the cost is O(time), not
+      O(events). At scale, polling is both expensive and slower to respond than
+      event-driven alternatives. AWS SNS, SQS, EventBridge, DynamoDB Streams, and
+      S3 Event Notifications are purpose-built to eliminate polling cost.
+    matching_criteria: >
+      Look for: time.sleep() or asyncio.sleep() inside loops that also contain an
+      API or database call; 'while True' loops with a sleep and a fetch; scheduled
+      Lambda or cron jobs that query for 'new' records since the last run; any
+      pattern of 'check if X has changed' repeated on a timer rather than reacting
+      to a change event. Flag sleep-in-loop + IO-call patterns as POSSIBLE.
+    related_laws: [3, 6]
+
+  - id: "unbounded-aggressive-retries"
+    name: "Unbounded / Aggressive Retries"
+    description: >
+      Retry logic without a maximum attempt count, exponential backoff, or jitter
+      can amplify cost during a partial outage. If 1,000 clients each retry a
+      failing endpoint 100 times with no backoff, the result is 100,000 API calls
+      and a thundering-herd problem. Each retry costs money (Lambda invocations,
+      API Gateway requests, DynamoDB read capacity) and can worsen the outage it
+      is trying to recover from. Bounded retries with exponential backoff + jitter
+      are the standard cost-safe pattern.
+    matching_criteria: >
+      Look for: retry loops with a fixed sleep (not exponential backoff); retry
+      decorators or libraries configured without max_attempts or max_tries; while
+      loop patterns that retry indefinitely (while not success: call()); boto3
+      or SDK config without retry mode='standard' or 'adaptive'; any retry logic
+      missing a maximum attempt cap. Flag retry-without-backoff and retry-without-cap.
+    related_laws: [1, 5]
+
+  - id: "no-caching-on-hot-paths"
+    name: "No Caching on Hot Paths"
+    description: >
+      Repeatedly fetching the same data from a database, downstream API, or
+      expensive computation on every request, when the data is stable enough to
+      cache. Hot paths with no caching incur redundant read costs and unnecessary
+      latency. Common examples: configuration loaded from Parameter Store on every
+      Lambda cold start, user profile fetched from DynamoDB on every authenticated
+      request, expensive aggregation recomputed for every dashboard refresh.
+    matching_criteria: >
+      Look for: database or API calls inside hot-path handlers (Lambda handler
+      function body, Flask/FastAPI route handlers) where the fetched data is
+      unlikely to change between requests (config, user profiles, lookup tables,
+      reference data). Also look for absence of caching decorators (e.g. @lru_cache,
+      @cache) on functions that call external services. Flag SSM/Secrets Manager
+      calls in Lambda handler bodies (not module-level) as POSSIBLE no-caching.
+    related_laws: [1, 6]
+
+  - id: "over-fetching-oversized-payloads"
+    name: "Over-Fetching / Oversized Payloads"
+    description: >
+      Fetching more data than needed from a service or returning more data than
+      the client requires. Over-fetching inflates data transfer costs, increases
+      serialization and deserialization time, and consumes more read capacity.
+      Selecting all columns from a wide table when only two are needed, returning
+      full S3 objects to read one metadata field, and downloading entire DynamoDB
+      items to check a single attribute are examples.
+    matching_criteria: >
+      Look for: SQL SELECT * or ORM queries without field/column selection
+      restrictions; DynamoDB GetItem or Query without ProjectionExpression;
+      S3 GetObject where only metadata or a small portion of the object is used
+      downstream; API responses stored entirely to extract one field; GraphQL
+      queries fetching all fields when only a subset is used. Flag SELECT * and
+      DynamoDB reads without ProjectionExpression as POSSIBLE.
+    related_laws: [1, 5]
+
+  - id: "sync-where-async-possible"
+    name: "Synchronous Where Async Possible"
+    description: >
+      Performing work synchronously that could be deferred to an async queue or
+      background process, blocking the caller and increasing per-request compute
+      time. Synchronous processing holds Lambda concurrency, ties up HTTP threads,
+      and increases the p99 latency and cost of every request in the critical path.
+      Tasks like sending emails, generating reports, resizing images, and logging
+      analytics events are commonly performed synchronously when they could be
+      enqueued to SQS or SNS and processed independently at lower cost.
+    matching_criteria: >
+      Look for: email/SMS sending calls (SES, SNS, Twilio) inline in request
+      handlers; image or document processing (Pillow, PDF generation) in synchronous
+      paths; analytics event firing inline in API handlers; audit logging to a
+      database in the hot path; any non-user-facing side effect performed
+      synchronously in a request handler. Flag these as POSSIBLE — they may be
+      intentional for simplicity at low volume.
+    related_laws: [3, 6]
+
+  - id: "per-request-heavy-initialization"
+    name: "Per-Request Heavy Initialization"
+    description: >
+      Performing expensive initialization on every request rather than once at
+      module load time or in a warm Lambda execution context. Common examples:
+      re-establishing database connections, re-loading configuration from Parameter
+      Store or Secrets Manager, re-importing heavy modules, and re-creating SDK
+      clients on every invocation. In Lambda, initialization placed inside the
+      handler function runs on every invocation; initialization at module level
+      runs once per execution environment and is amortized across many requests.
+    matching_criteria: >
+      Look for: boto3.client() or boto3.resource() calls inside Lambda handler
+      functions (not at module level); database connection creation inside handler
+      functions; os.environ or SSM Parameter Store reads inside the handler body
+      that could be module-level constants; heavy library imports (ML models,
+      large data files) inside handler bodies. Flag any boto3.client() inside
+      a handler function as POSSIBLE per-request heavy initialization.
+    related_laws: [1, 5]
+
+  - id: "whole-object-single-field-read"
+    name: "Loading Whole Object to Read One Field"
+    description: >
+      Fetching an entire data object (DynamoDB item, S3 object, API response)
+      to read or filter on a single attribute. This wastes read capacity, network
+      bandwidth, and deserialization cost — all priced per byte. DynamoDB read
+      capacity is billed per 4KB read unit regardless of how many attributes are
+      used; S3 data transfer is billed per byte regardless of what fraction of the
+      object is consumed. Projection expressions, range queries, and S3 Select
+      can eliminate the over-read cost.
+    matching_criteria: >
+      Look for: DynamoDB GetItem calls where only one attribute of the result is
+      accessed downstream (result['status'], result.get('active')); S3 GetObject
+      followed by parsing/splitting/regex on the body to extract one value;
+      JSON deserialization of a large payload to access a single key; API calls
+      where only one field of the response body is used. Flag DynamoDB GetItem
+      without ProjectionExpression followed by single-field access as POSSIBLE.
+    related_laws: [1, 5]
