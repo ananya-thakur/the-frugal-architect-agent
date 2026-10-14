@@ -1,0 +1,183 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  # ── Lint + format ────────────────────────────────────────────────────────────
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install ruff
+      - run: ruff check .
+      - run: ruff format --check .
+
+  # ── Type check ───────────────────────────────────────────────────────────────
+  type-check:
+    name: Type check (mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install mypy pyyaml
+      - run: mypy agent/ entrypoint.py --ignore-missing-imports
+
+  # ── Unit tests ───────────────────────────────────────────────────────────────
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install pytest pytest-cov pyyaml
+      - run: pytest tests/ --cov=agent --cov-report=xml --cov-report=term-missing
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+  # ── Security: CVE audit ──────────────────────────────────────────────────────
+  pip-audit:
+    name: Dependency CVE audit (pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install pip-audit
+      # Exit non-zero if CRITICAL or HIGH CVEs exist — blocks merge (DS-02)
+      - run: pip-audit -r requirements.txt --severity HIGH
+
+  # ── Security: no hardcoded model IDs (SC-02) ─────────────────────────────────
+  validate-no-hardcoded-model-id:
+    name: No hardcoded Bedrock model IDs (SC-02)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Fails the build if any Bedrock ARN prefix appears in Python source or JSON configs
+      - name: Scan for hardcoded model ARNs
+        run: |
+          if grep -rE 'arn:aws:bedrock:[^"]*::foundation-model/' \
+               --include="*.py" --include="*.json" --include="*.yaml" --include="*.yml" .; then
+            echo "ERROR: Hardcoded Bedrock model ARN found. Use AGENT_MODEL_ID env var instead."
+            exit 1
+          fi
+
+  # ── Security: validate agentcore.json (SC-03) ────────────────────────────────
+  validate-agentcore-json:
+    name: Validate agentcore.json env-var-only (SC-03)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Assert no literal secrets in agentcore.json
+        run: |
+          python - <<'EOF'
+          import json, sys, re
+
+          with open("agentcore.json") as f:
+              config = json.load(f)
+
+          env = config.get("environment", {})
+          sensitive_pattern = re.compile(r"(AGENT_MODEL_ID|MODEL_PRICE|.*TOKEN.*|.*KEY.*)", re.I)
+          env_var_pattern = re.compile(r"^\$\{[^}]+\}")
+          errors = []
+
+          for key, value in env.items():
+              if sensitive_pattern.match(key) and not env_var_pattern.match(str(value)):
+                  errors.append(f"  {key}: {value!r} (must be ${{VAR_NAME}} reference)")
+
+          if errors:
+              print("ERROR: Literal secrets found in agentcore.json environment block:")
+              for e in errors:
+                  print(e)
+              sys.exit(1)
+          print("OK: agentcore.json passes env-var-only check")
+          EOF
+
+  # ── Security: validate security_context (AA-03) ──────────────────────────────
+  validate-security-context:
+    name: Validate agentcore.json security_context (AA-03)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Assert required security_context fields
+        run: |
+          python - <<'EOF'
+          import json, sys
+
+          with open("agentcore.json") as f:
+              config = json.load(f)
+
+          ctx = config.get("security_context", {})
+          required = {
+              "allow_privilege_escalation": False,
+              "privileged": False,
+              "run_as_non_root": True,
+              "run_as_user": 1000,
+          }
+          errors = []
+          for field, expected in required.items():
+              actual = ctx.get(field)
+              if actual != expected:
+                  errors.append(f"  {field}: expected {expected!r}, got {actual!r}")
+
+          if errors:
+              print("ERROR: security_context validation failed:")
+              for e in errors:
+                  print(e)
+              sys.exit(1)
+          print("OK: security_context passes all required checks")
+          EOF
+
+  # ── CDK TypeScript build ──────────────────────────────────────────────────────
+  infra-build:
+    name: CDK TypeScript build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: infra/package.json
+      - run: npm ci
+      - run: npm run build
+
+  # ── Docker build (no push on PR) ──────────────────────────────────────────────
+  docker-build:
+    name: Docker build (smoke test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image (no push)
+        run: |
+          docker build \
+            --build-arg PYTHON_DIGEST=sha256:REPLACE_WITH_PINNED_DIGEST \
+            --target builder \
+            -t frugal-architect-agent:ci-test \
+            .

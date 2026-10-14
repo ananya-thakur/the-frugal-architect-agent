@@ -1,0 +1,49 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "InvokeConfiguredModel",
+      "Effect": "Allow",
+      "Action": ["bedrock:InvokeModel"],
+      "Resource": "arn:aws:bedrock:*::foundation-model/*"
+    },
+    {
+      "Sid": "AgentCoreMemory",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock-agentcore:CreateMemory",
+        "bedrock-agentcore:GetMemory",
+        "bedrock-agentcore:UpdateMemory",
+        "bedrock-agentcore:DeleteMemory"
+      ],
+      "Resource": "arn:aws:bedrock-agentcore:*:*:memory/${AGENT_NAMESPACE}/*"
+    },
+    {
+      "Sid": "OtelMetricsExport",
+      "Effect": "Allow",
+      "Action": ["cloudwatch:PutMetricData"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "OtelTracesExport",
+      "Effect": "Allow",
+      "Action": [
+        "xray:PutTraceSegments",
+        "xray:PutTelemetryRecords"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "DenyAdvisoryOnlyCostAPIs",
+      "Effect": "Deny",
+      "Action": [
+        "ce:*",
+        "budgets:*",
+        "compute-optimizer:*",
+        "cur:*",
+        "pricing:*"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
