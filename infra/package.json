@@ -1,0 +1,27 @@
+{
+  "name": "frugal-architect-agent-infra",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "cdk": "cdk",
+    "synth": "cdk synth",
+    "diff": "cdk diff",
+    "deploy:ecr": "cdk deploy FrugalArchitectEcrStack",
+    "deploy:monitoring": "cdk deploy FrugalArchitectMonitoringStack"
+  },
+  "devDependencies": {
+    "@types/node": "22.x",
+    "aws-cdk": "2.x",
+    "jest": "^29",
+    "ts-jest": "^29",
+    "ts-node": "^10",
+    "typescript": "~5.5.0"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "2.x",
+    "constructs": "^10.0.0"
+  }
+}

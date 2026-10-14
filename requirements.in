@@ -1,0 +1,13 @@
+# Source requirements for the Frugal Architect Agent.
+# Run `pip-compile --generate-hashes requirements.in -o requirements.txt`
+# to regenerate the pinned lock file (DS-01).
+
+# ── Strands Agents SDK (mandatory — see ADR-001, ADR-005, ADR-006) ────────────
+strands-agents[bedrock,otel]
+
+# ── Rubric loading ────────────────────────────────────────────────────────────
+pyyaml>=6.0
+
+# ── OTEL export (explicit; strands[otel] may bring these transitively) ────────
+opentelemetry-sdk>=1.27.0
+opentelemetry-exporter-otlp-proto-grpc>=1.27.0

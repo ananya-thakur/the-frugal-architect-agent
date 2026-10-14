@@ -1,0 +1,30 @@
+# Development Dockerfile — uses floating tag for local developer convenience.
+# NOT used in CI image publish.  See Dockerfile for the production image.
+#
+# Usage:
+#   docker build -f Dockerfile.dev -t frugal-architect-agent:dev .
+#   docker run --rm \
+#     -e AGENT_MODEL_ID=<model-id> \
+#     -e MODEL_PRICE_PER_TOKEN=0.000003 \
+#     -e OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 \
+#     frugal-architect-agent:dev
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install runtime deps (no hash verification for developer convenience)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install dev deps
+COPY requirements-dev.txt .
+RUN pip install --no-cache-dir -r requirements-dev.txt
+
+COPY agent/ ./agent/
+COPY entrypoint.py .
+COPY agentcore.json .
+COPY tests/ ./tests/
+
+# Run as root in dev for volume-mount convenience (not for production)
+ENTRYPOINT ["python", "entrypoint.py"]

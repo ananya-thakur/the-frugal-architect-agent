@@ -1,0 +1,26 @@
+{
+  "runtime": "python3.12",
+  "handler": "entrypoint.handler",
+  "environment": {
+    "AGENT_MODEL_ID":                "${AGENT_MODEL_ID}",
+    "RUBRIC_PATH":                   "${RUBRIC_PATH:-agent/rubric.yaml}",
+    "SCAN_FILE_LIMIT":               "${SCAN_FILE_LIMIT:-500}",
+    "SCAN_TOKEN_BUDGET":             "${SCAN_TOKEN_BUDGET:-100000}",
+    "MODEL_PRICE_PER_TOKEN":         "${MODEL_PRICE_PER_TOKEN}",
+    "OTEL_EXPORTER_OTLP_ENDPOINT":   "${OTEL_EXPORTER_OTLP_ENDPOINT}",
+    "OTEL_SERVICE_NAME":             "${OTEL_SERVICE_NAME:-frugal-architect-agent}",
+    "AGENTCORE_MEMORY_ID":           "${AGENTCORE_MEMORY_ID:-}",
+    "AGENTCORE_MEMORY_REGION":       "${AGENTCORE_MEMORY_REGION:-}"
+  },
+  "security_context": {
+    "allow_privilege_escalation": false,
+    "privileged": false,
+    "run_as_non_root": true,
+    "run_as_user": 1000
+  },
+  "memory": {
+    "enabled": true,
+    "session_ttl_seconds": 3600,
+    "long_term_enabled": true
+  }
+}
