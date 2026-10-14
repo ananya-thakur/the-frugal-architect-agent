@@ -2,6 +2,7 @@ LICENSE
 README.md
 pyproject.toml
 agent/__init__.py
+agent/agent_assembly.py
 agent/config.py
 agent/observability.py
 agent/app_scanner/__init__.py
