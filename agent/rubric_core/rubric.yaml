@@ -27,6 +27,31 @@ laws:
     v2_verifiable_signals:
       - "AWS Budgets: confirm at least one budget alert is configured for this workload"
       - "AWS Cost Explorer: verify cost allocation tags are present on resources"
+    iac_signals:
+      - id: "cf-lambda-over-memory"
+        formats: ["cloudformation", "sam"]
+        resource_type_filter: "AWS::Lambda::Function"
+        attribute_path: "Properties.MemorySize"
+        predicate: "> 1024"
+        gap_description: "Lambda function provisioned with more than 1024 MB — verify this is justified by profiling data, as over-provisioning directly increases cost."
+        evidence_template: "{resource_id} in {file_path} sets MemorySize={attribute_value} MB."
+        severity_rank: 2
+      - id: "tf-lambda-over-memory"
+        formats: ["terraform"]
+        resource_type_filter: "aws_lambda_function"
+        attribute_path: "memory_size"
+        predicate: "> 1024"
+        gap_description: "Lambda function provisioned with more than 1024 MB — verify this is justified by profiling data."
+        evidence_template: "{resource_id} in {file_path} sets memory_size={attribute_value} MB."
+        severity_rank: 2
+      - id: "sls-lambda-over-memory"
+        formats: ["serverless"]
+        resource_type_filter: null
+        attribute_path: "memorySize"
+        predicate: "> 1024"
+        gap_description: "Serverless function provisioned with more than 1024 MB — over-provisioned memory increases per-invocation cost."
+        evidence_template: "Function {resource_id} in {file_path} sets memorySize={attribute_value} MB."
+        severity_rank: 2
 
   - number: 2
     title: "Systems That Are Cost-Aware Are Systems That Can Be Optimized"
@@ -56,6 +81,7 @@ laws:
     v2_verifiable_signals:
       - "AWS Cost Explorer: verify cost is broken down by tag or service at feature granularity"
       - "AWS Cost Anomaly Detection: confirm at least one monitor is active for this workload"
+    iac_signals: []
 
   - number: 3
     title: "Architecting is a Series of Trade-offs"
@@ -84,6 +110,23 @@ laws:
     v2_verifiable_signals:
       - "AWS Compute Optimizer: check for right-sizing recommendations indicating over-provisioning"
       - "AWS Trusted Advisor: review cost-optimization checks for idle or under-utilized resources"
+    iac_signals:
+      - id: "cf-lambda-default-architecture"
+        formats: ["cloudformation", "sam"]
+        resource_type_filter: "AWS::Lambda::Function"
+        attribute_path: "Properties.Architectures"
+        predicate: "== null"
+        gap_description: "Lambda function does not specify Architectures — defaulting to x86_64; consider arm64 (Graviton2) which offers ~20% cost savings for most workloads."
+        evidence_template: "{resource_id} in {file_path} has no Architectures property set (defaults to x86_64)."
+        severity_rank: 3
+      - id: "tf-lambda-default-architecture"
+        formats: ["terraform"]
+        resource_type_filter: "aws_lambda_function"
+        attribute_path: "architectures"
+        predicate: "== null"
+        gap_description: "Lambda function does not specify architectures — defaulting to x86_64; consider arm64 for ~20% cost savings."
+        evidence_template: "{resource_id} in {file_path} has no architectures attribute set (defaults to x86_64)."
+        severity_rank: 3
 
   - number: 4
     title: "Unobserved Systems Lead to Unknown Costs"
@@ -112,6 +155,31 @@ laws:
     v2_verifiable_signals:
       - "AWS X-Ray: confirm tracing is enabled and sampling rate is set for production traffic"
       - "CloudWatch Logs Insights: verify structured log fields include request correlation IDs"
+    iac_signals:
+      - id: "cf-lambda-no-xray"
+        formats: ["cloudformation", "sam"]
+        resource_type_filter: "AWS::Lambda::Function"
+        attribute_path: "Properties.TracingConfig.Mode"
+        predicate: "!= Active"
+        gap_description: "Lambda function does not have X-Ray active tracing enabled — cost spikes from this function will be invisible without distributed tracing."
+        evidence_template: "{resource_id} in {file_path} has TracingConfig.Mode={attribute_value} (not Active)."
+        severity_rank: 1
+      - id: "tf-lambda-no-xray"
+        formats: ["terraform"]
+        resource_type_filter: "aws_lambda_function"
+        attribute_path: "tracing_config.mode"
+        predicate: "!= Active"
+        gap_description: "Lambda function does not have X-Ray active tracing enabled — cost spikes will be invisible without distributed tracing."
+        evidence_template: "{resource_id} in {file_path} has tracing_config.mode={attribute_value} (not Active)."
+        severity_rank: 1
+      - id: "sls-lambda-no-tracing"
+        formats: ["serverless"]
+        resource_type_filter: null
+        attribute_path: "tracing"
+        predicate: "!= Active"
+        gap_description: "Serverless function does not have tracing set to Active — cost monitoring via X-Ray is disabled."
+        evidence_template: "Function {resource_id} in {file_path} has tracing={attribute_value} (not Active)."
+        severity_rank: 1
 
   - number: 5
     title: "Cost-Aware Architectures Implement Cost Controls"
@@ -142,6 +210,23 @@ laws:
     v2_verifiable_signals:
       - "AWS Budgets: verify alert actions are configured (SNS, Lambda, or SSM) not just notifications"
       - "API Gateway: confirm usage plans and throttling are configured for public API methods"
+    iac_signals:
+      - id: "cf-lambda-no-reserved-concurrency"
+        formats: ["cloudformation", "sam"]
+        resource_type_filter: "AWS::Lambda::Function"
+        attribute_path: "Properties.ReservedConcurrentExecutions"
+        predicate: "== null"
+        gap_description: "Lambda function has no reserved concurrency limit — unbounded concurrency can cause denial-of-wallet if the function is invoked at unexpected scale."
+        evidence_template: "{resource_id} in {file_path} has no ReservedConcurrentExecutions set."
+        severity_rank: 2
+      - id: "tf-lambda-no-reserved-concurrency"
+        formats: ["terraform"]
+        resource_type_filter: "aws_lambda_function"
+        attribute_path: "reserved_concurrent_executions"
+        predicate: "== null"
+        gap_description: "Lambda function has no reserved concurrency limit — unbounded concurrency can cause denial-of-wallet."
+        evidence_template: "{resource_id} in {file_path} has no reserved_concurrent_executions set."
+        severity_rank: 2
 
   - number: 6
     title: "Cost Optimization is Incremental"
@@ -170,6 +255,7 @@ laws:
     v2_verifiable_signals:
       - "AWS Cost Explorer: compare cost trends week-over-week to detect incremental improvements"
       - "AWS Compute Optimizer: verify recommendations are actioned incrementally over time"
+    iac_signals: []
 
   - number: 7
     title: "Unchallenged Success Leads to Assumptions"
@@ -199,6 +285,15 @@ laws:
     v2_verifiable_signals:
       - "AWS Compute Optimizer: check for over-provisioned resources that indicate assumptions no longer hold"
       - "AWS Cost Explorer: identify cost trend inflection points that may signal assumption failures at scale"
+    iac_signals:
+      - id: "k8s-no-resource-limits"
+        formats: ["kubernetes"]
+        resource_type_filter: "Deployment"
+        attribute_path: "spec.template.spec.containers.0.resources.limits"
+        predicate: "== null"
+        gap_description: "Kubernetes Deployment containers have no resource limits set — unconstrained containers can consume unlimited CPU and memory, leading to unpredictable costs and node evictions."
+        evidence_template: "{resource_id} in {file_path} has containers without resource limits."
+        severity_rank: 2
 
 anti_pattern_signals:
   - id: "n-plus-one-queries"
