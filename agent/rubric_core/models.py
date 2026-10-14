@@ -5,6 +5,21 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
+class IaCSignal(BaseModel):
+    """One detectable frugality anti-pattern at the IaC layer (ADR-002, BR-02)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str = Field(min_length=1)
+    formats: list[str] = Field(min_length=1)
+    resource_type_filter: str | None = None
+    attribute_path: str = Field(min_length=1)
+    predicate: str = Field(min_length=1)
+    gap_description: str = Field(min_length=1)
+    evidence_template: str = Field(min_length=1)
+    severity_rank: int = Field(ge=1, le=3)
+
+
 class LawDefinition(BaseModel):
     """One of the 7 Laws of Frugal Architecture by Werner Vogels."""
 
@@ -16,6 +31,7 @@ class LawDefinition(BaseModel):
     strong_looks_like: str = Field(min_length=1)
     probing_questions: list[str] = Field(min_length=1)
     v2_verifiable_signals: list[str] = Field(default_factory=list)
+    iac_signals: list[IaCSignal] = Field(default_factory=list)
 
 
 class AntiPatternSignal(BaseModel):
