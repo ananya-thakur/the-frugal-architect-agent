@@ -1,0 +1,12 @@
+LICENSE
+README.md
+pyproject.toml
+agent/__init__.py
+agent/config.py
+agent/observability.py
+frugal_architect_agent.egg-info/PKG-INFO
+frugal_architect_agent.egg-info/SOURCES.txt
+frugal_architect_agent.egg-info/dependency_links.txt
+frugal_architect_agent.egg-info/top_level.txt
+tests/test_config.py
+tests/test_observability.py
