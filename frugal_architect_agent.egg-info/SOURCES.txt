@@ -23,6 +23,8 @@ agent/rubric_core/__init__.py
 agent/rubric_core/engine.py
 agent/rubric_core/models.py
 agent/rubric_core/rubric.yaml
+agent/scorecard_formatter/__init__.py
+agent/scorecard_formatter/formatter.py
 agent/scoring_engine/__init__.py
 agent/scoring_engine/engine.py
 agent/scoring_engine/models.py
