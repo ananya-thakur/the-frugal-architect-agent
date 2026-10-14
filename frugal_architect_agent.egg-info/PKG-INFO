@@ -1,0 +1,218 @@
+Metadata-Version: 2.4
+Name: frugal-architect-agent
+Version: 0.1.0
+Summary: Advisory agent that evaluates codebases against Werner Vogels' 7 Laws of Frugal Architecture
+License: Apache-2.0
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Dynamic: license-file
+
+# The Frugal Architect Agent
+
+An advisory agent on [Amazon Bedrock AgentCore Runtime](https://aws.amazon.com/bedrock/agentcore/) that evaluates software projects against **The Frugal Architect** — the 7 Laws of Frugal Architecture by Werner Vogels (https://thefrugalarchitect.com/laws/).
+
+> **Attribution**: The 7 Laws of Frugal Architecture are the intellectual property of Werner Vogels / The Frugal Architect. Every scorecard and response produced by this agent attributes the laws accordingly. This agent does not claim authorship of the laws.
+
+> **Advisory only (v1)**: This agent reads and recommends. It does NOT modify code, open PRs, or call AWS account/cost APIs. It produces a roadmap; a human engineer implements it.
+
+---
+
+## Interaction modes
+
+| Mode | How to invoke | Description |
+|---|---|---|
+| **CODEBASE REVIEW** | Connect a repo, then ask "Review my repo" | Full IaC + app-code analysis → Frugal Architecture Scorecard |
+| **DESIGN REVIEW** | Describe your system when no repo is connected | Consultative probing questions against all 7 laws |
+| **DECISION CHECK** | "Evaluate this decision: [description]" | Evaluate a specific architecture choice against the most relevant laws |
+| **TEACH** | "Explain Law III" or "What is Law V?" | Grounded, attributed explanation of any of the 7 laws |
+
+---
+
+## Setup
+
+### Prerequisites
+
+- Python 3.12+
+- Node.js 22+ (for CDK infra)
+- AWS CLI configured with appropriate credentials
+- An AWS account with Amazon Bedrock AgentCore enabled
+- Docker (for container builds)
+
+### 1. Clone and install Python dependencies
+
+```bash
+git clone <repo-url>
+cd frugal-architect-agent
+
+# Install runtime deps
+pip install --require-hashes -r requirements.txt
+
+# Install dev deps (local development only)
+pip install --require-hashes -r requirements-dev.txt
+```
+
+> **First-time setup**: The `requirements.txt` and `requirements-dev.txt` files contain
+> `PLACEHOLDER` hashes that must be replaced before use. Run:
+> ```bash
+> pip-compile --generate-hashes requirements.in -o requirements.txt
+> pip-compile --generate-hashes requirements-dev.in -o requirements-dev.txt
+> ```
+
+### 2. Deploy infrastructure
+
+```bash
+cd infra
+npm install
+npm run deploy:ecr          # Creates ECR repository
+npm run deploy:monitoring   # Creates CloudWatch dashboard + alarms
+```
+
+### 3. Pin the Dockerfile base image digest
+
+Before building the production image, pin the base image SHA:
+
+```bash
+docker pull python:3.12-slim
+DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' python:3.12-slim | cut -d@ -f2)
+# Edit Dockerfile: replace sha256:REPLACE_WITH_PINNED_DIGEST with $DIGEST
+```
+
+### 4. Build and push the container image
+
+```bash
+ECR_URI=$(aws ecr describe-repositories \
+  --repository-names frugal-architect-agent \
+  --query 'repositories[0].repositoryUri' --output text)
+GIT_SHA=$(git rev-parse --short HEAD)
+
+aws ecr get-login-password | docker login --username AWS --password-stdin "$ECR_URI"
+
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -t "${ECR_URI}:${GIT_SHA}" \
+  -t "${ECR_URI}:latest" \
+  --push .
+```
+
+### 5. Deploy to AgentCore
+
+```bash
+aws bedrock-agentcore create-agent \
+  --agent-name frugal-architect-agent-prod \
+  --container-image "${ECR_URI}:${GIT_SHA}" \
+  --agent-descriptor file://agentcore.json \
+  --environment-variables \
+    AGENT_MODEL_ID=<bedrock-model-id> \
+    MODEL_PRICE_PER_TOKEN=<price> \
+    OTEL_EXPORTER_OTLP_ENDPOINT=<otlp-endpoint>
+```
+
+---
+
+## Configuration reference
+
+All configuration is injected as environment variables at deployment time. No values are hardcoded in source code or the Dockerfile.
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `AGENT_MODEL_ID` | **Yes** | — | Bedrock model ID (e.g. `anthropic.claude-3-5-sonnet-20241022-v2:0`) |
+| `MODEL_PRICE_PER_TOKEN` | **Yes** | — | Cost per token in USD (used for cost-per-run metric) |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | **Yes** | — | OTLP endpoint for traces and metrics |
+| `RUBRIC_PATH` | No | `agent/rubric.yaml` | Path to the rubric file inside the container |
+| `SCAN_FILE_LIMIT` | No | `500` | Max files scanned per run (bounds token cost, ADR-007) |
+| `SCAN_TOKEN_BUDGET` | No | `100000` | Max tokens consumed by scan per run (ADR-007) |
+| `OTEL_SERVICE_NAME` | No | `frugal-architect-agent` | OTEL service name for traces |
+| `AGENTCORE_MEMORY_ID` | No | — | AgentCore Memory ID (injected by platform when memory is enabled) |
+| `AGENTCORE_MEMORY_REGION` | No | — | AWS region for AgentCore Memory |
+
+The agent **fails at startup with a clear error** if any Required variable is missing — never at first invocation.
+
+---
+
+## OTEL traces and metrics
+
+The agent exports distributed traces and metrics via OTEL to AgentCore Observability / CloudWatch:
+
+| Signal | Metric / span name | Description |
+|---|---|---|
+| Trace | `invocation` | End-to-end per-invocation span |
+| Trace | `tool.<name>` | Per-tool-call span |
+| Trace | `model.invoke` | Per-model-call span |
+| Metric | `invocation.duration_ms` | End-to-end latency |
+| Metric | `model.tokens_input` | Input tokens per call |
+| Metric | `model.tokens_output` | Output tokens per call |
+| Metric | `model.cost_usd` | Estimated cost per run |
+| Metric | `tool.<name>.duration_ms` | Per-tool latency |
+| Metric | `tool.<name>.calls` | Per-tool call count |
+
+**Viewing traces**: Open CloudWatch → X-Ray traces → search by service name `frugal-architect-agent`.
+
+**Viewing metrics**: Open the `frugal-architect-agent` CloudWatch dashboard deployed by the monitoring stack.
+
+---
+
+## Evaluation harness
+
+The offline evaluation harness (`eval/run_eval.py`) scores the agent on:
+
+| Dimension | What it checks |
+|---|---|
+| **Groundedness** | Every finding cites a real law + real evidence (no fabrication) |
+| **Citation correctness** | The cited law number matches the finding |
+| **Tool-selection accuracy** | IaC findings use `scan_iac`; app-code findings use `scan_app_antipatterns` |
+| **UNKNOWN discipline** | Missing critical info yields UNKNOWN + probing question, not a fabricated score |
+
+```bash
+# Run the evaluation harness against a deployed AgentCore endpoint
+AGENTCORE_ENDPOINT=<endpoint> python eval/run_eval.py
+
+# Or run against a local Docker instance
+docker run --rm \
+  -e AGENT_MODEL_ID=<model-id> \
+  -e MODEL_PRICE_PER_TOKEN=0.000003 \
+  -e OTEL_EXPORTER_OTLP_ENDPOINT=http://host.docker.internal:4317 \
+  frugal-architect-agent:dev &
+
+python eval/run_eval.py --endpoint http://localhost:8080
+```
+
+Evaluation results are emitted as OTEL metrics (namespace `frugal-architect-agent/eval`) and as a Markdown report at `eval/results/latest.md`.
+
+---
+
+## Running tests
+
+```bash
+# Unit tests
+pytest tests/ -v
+
+# With coverage
+pytest tests/ --cov=agent --cov-report=term-missing
+```
+
+---
+
+## Teardown
+
+```bash
+# Remove AgentCore deployments
+aws bedrock-agentcore delete-agent --agent-name frugal-architect-agent-prod
+aws bedrock-agentcore delete-agent --agent-name frugal-architect-agent-staging
+aws bedrock-agentcore delete-agent --agent-name frugal-architect-agent-dev
+
+# Destroy CDK stacks (ECR repository uses RETAIN policy — delete manually to avoid losing images)
+cd infra
+cdk destroy FrugalArchitectMonitoringStack
+# To also destroy the ECR repository (removes all images):
+aws ecr delete-repository --repository-name frugal-architect-agent --force
+cdk destroy FrugalArchitectEcrStack
+```
+
+---
+
+## Attribution
+
+The 7 Laws of Frugal Architecture were created by **Werner Vogels** (CTO, Amazon) and are published at [https://thefrugalarchitect.com/laws/](https://thefrugalarchitect.com/laws/). All law citations in this agent's output attribute Werner Vogels and The Frugal Architect accordingly.
+
+This software is licensed under the [Apache License 2.0](LICENSE).
