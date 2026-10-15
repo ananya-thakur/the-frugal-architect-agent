@@ -13,7 +13,6 @@ telemetry failures never propagate to the user-facing chat response.
 import logging
 import os
 from dataclasses import dataclass
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +74,7 @@ class EvalReport:
 # ── Module-level singletons ────────────────────────────────────────────────────
 
 # Set by setup(); None means setup() has not been called (or failed).
-_otel_config: Optional[OTelConfig] = None
+_otel_config: OTelConfig | None = None
 
 # OTEL meter obtained from the Strands-configured global provider (lazy).
 _meter = None  # opentelemetry.metrics.Meter | None

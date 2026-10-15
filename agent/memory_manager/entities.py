@@ -35,7 +35,7 @@ class LawScore:
         return dataclasses.asdict(self)
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "LawScore":
+    def from_dict(cls, d: dict[str, Any]) -> LawScore:
         return cls(
             law_number=int(d["law_number"]),
             law_title=str(d["law_title"]),
@@ -70,7 +70,7 @@ class Finding:
         return dataclasses.asdict(self)
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "Finding":
+    def from_dict(cls, d: dict[str, Any]) -> Finding:
         return cls(
             id=str(d["id"]),
             law_number=int(d["law_number"]),
@@ -101,7 +101,7 @@ class RemediationStep:
         return dataclasses.asdict(self)
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "RemediationStep":
+    def from_dict(cls, d: dict[str, Any]) -> RemediationStep:
         return cls(
             rank=int(d["rank"]),
             law_number=int(d["law_number"]),
@@ -143,7 +143,7 @@ class Scorecard:
         }
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "Scorecard":
+    def from_dict(cls, d: dict[str, Any]) -> Scorecard:
         return cls(
             session_id=str(d["session_id"]),
             overall_verdict=str(d["overall_verdict"]),
@@ -184,7 +184,7 @@ class ScorecardSummary:
         }
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "ScorecardSummary":
+    def from_dict(cls, d: dict[str, Any]) -> ScorecardSummary:
         return cls(
             user_id=str(d["user_id"]),
             project_id=str(d["project_id"]),

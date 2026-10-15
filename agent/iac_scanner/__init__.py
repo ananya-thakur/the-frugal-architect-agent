@@ -3,8 +3,8 @@
 from agent.iac_scanner.engine import scan_iac
 from agent.iac_scanner.models import (
     Confidence,
-    FirmFinding,
     File,
+    FirmFinding,
     IaCFormat,
     PrioritizedInventory,
     ScanSummary,

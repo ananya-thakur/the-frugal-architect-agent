@@ -5,7 +5,6 @@ from __future__ import annotations
 import importlib.resources
 import os
 from pathlib import Path
-from typing import Union
 
 import yaml
 from pydantic import ValidationError
@@ -59,7 +58,7 @@ def _reset_cache() -> None:
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def load_rubric(path: Union[str, Path, None] = None) -> Rubric:
+def load_rubric(path: str | Path | None = None) -> Rubric:
     """
     Load, validate, and cache the Frugal Architecture rubric.
 
@@ -127,7 +126,7 @@ def load_rubric(path: Union[str, Path, None] = None) -> Rubric:
     return rubric
 
 
-def get_law(law_ref: Union[int, str]) -> LawDefinition:
+def get_law(law_ref: int | str) -> LawDefinition:
     """
     Return the LawDefinition for the given reference.
 

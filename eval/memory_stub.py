@@ -14,7 +14,7 @@ Per security-design-eval-harness SR-EH-003:
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 
 class InProcessMemoryStub:
@@ -28,7 +28,7 @@ class InProcessMemoryStub:
     def store_session(self, session_id: str, data: Any) -> None:  # noqa: ANN401
         self._store[f"session:{session_id}"] = data
 
-    def get_session(self, session_id: str) -> Optional[Any]:  # noqa: ANN401
+    def get_session(self, session_id: str) -> Any | None:  # noqa: ANN401
         return self._store.get(f"session:{session_id}")
 
     # ── Long-term memory ──────────────────────────────────────────────────────
@@ -36,12 +36,12 @@ class InProcessMemoryStub:
     def store_long_term(self, user_id: str, key: str, data: Any) -> None:  # noqa: ANN401
         self._store[f"long_term:{user_id}:{key}"] = data
 
-    def get_long_term(self, user_id: str, key: str) -> Optional[Any]:  # noqa: ANN401
+    def get_long_term(self, user_id: str, key: str) -> Any | None:  # noqa: ANN401
         return self._store.get(f"long_term:{user_id}:{key}")
 
     # ── Reference resolution ──────────────────────────────────────────────────
 
-    def resolve_reference(self, ref: str) -> Optional[Any]:  # noqa: ANN401
+    def resolve_reference(self, ref: str) -> Any | None:  # noqa: ANN401
         """Always returns None — the stub has no cross-session references."""
         return None
 

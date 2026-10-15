@@ -21,8 +21,8 @@ from agent.tools.repo_connector.types import (
     RawInventory,
     RepoInventory,
     RepoRef,
-    SCMNotConnectedError,
     ScanLimits,
+    SCMNotConnectedError,
     ScopeNote,
 )
 

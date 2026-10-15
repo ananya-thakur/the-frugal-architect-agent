@@ -15,7 +15,6 @@ from agent.scoring_engine.models import (
     ConfidenceTag,
     LawScore,
     RemediationRoadmap,
-    RemediationStep,
     Scorecard,
     Verdict,
 )
@@ -245,7 +244,7 @@ def _overall_verdict_line(scorecard: Scorecard) -> str:
 
 def format_markdown(
     scorecard: Scorecard,
-    rubric: "Rubric | None" = None,
+    rubric: Rubric | None = None,
     top_n: int = _DEFAULT_TOP_N,
 ) -> str:
     """Render a Frugal Architecture Scorecard as a Markdown document.

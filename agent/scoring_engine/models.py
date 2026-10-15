@@ -13,7 +13,6 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-
 # ── Enumerations ──────────────────────────────────────────────────────────────
 
 
@@ -215,7 +214,7 @@ class LawScore(BaseModel):
     probing_question:  str | None = None
 
     @model_validator(mode="after")
-    def _check_invariants(self) -> "LawScore":
+    def _check_invariants(self) -> LawScore:
         if self.verdict in (Verdict.PARTIAL, Verdict.GAP):
             gap_fields = ("gap", "target_state", "remediation_steps", "effort", "impact")
             missing = [f for f in gap_fields if getattr(self, f) is None]
@@ -265,7 +264,7 @@ class Scorecard(BaseModel):
     created_at:          Any  # datetime; Any avoids strict-mode issues with datetime
 
     @model_validator(mode="after")
-    def _check_scorecard(self) -> "Scorecard":
+    def _check_scorecard(self) -> Scorecard:
         if len(self.law_scores) != 7:
             raise ValueError(
                 f"Scorecard must have exactly 7 LawScores, got {len(self.law_scores)} (BR-06)"

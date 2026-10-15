@@ -10,7 +10,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
-
 # ---------------------------------------------------------------------------
 # Consumed from repo-connector (placeholder until that unit is built)
 # ---------------------------------------------------------------------------

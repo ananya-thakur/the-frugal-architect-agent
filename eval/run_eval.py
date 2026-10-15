@@ -30,9 +30,8 @@ import logging
 import os
 import sys
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional
 
 import yaml
 
@@ -40,7 +39,8 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from agent import observability as _obs
-from agent.observability import DimensionResult as ObsDimResult, EvalReport as ObsEvalReport
+from agent.observability import DimensionResult as ObsDimResult
+from agent.observability import EvalReport as ObsEvalReport
 from eval.evaluator import aggregate_results, evaluate_test_case
 from eval.fixture_validator import FixtureSecurityViolation, validate_fixtures
 from eval.models import (
@@ -83,7 +83,7 @@ def load_test_cases(fixture_dir: Path) -> list[TestCase]:
 
 
 def _parse_assertions(raw: dict[str, object]) -> TestCaseAssertions:
-    def _g(key: str, cls: type) -> Optional[object]:  # type: ignore[type-arg]
+    def _g(key: str, cls: type) -> object | None:  # type: ignore[type-arg]
         v = raw.get(key)
         return cls(**v) if isinstance(v, dict) else None  # type: ignore[call-arg]
 
@@ -135,7 +135,7 @@ def _invoke_local(message: str) -> str:
         return f"ERROR: {exc}"
 
 
-def invoke_agent(endpoint: Optional[str], test_case: TestCase, session_id: str) -> str:
+def invoke_agent(endpoint: str | None, test_case: TestCase, session_id: str) -> str:
     """Dispatch to HTTP or local agent based on whether endpoint is configured."""
     message = _build_input_message(test_case)
     if endpoint:
@@ -208,7 +208,7 @@ def _emit_otel_metrics(report: EvalReport) -> None:
 
 
 def run_eval(
-    endpoint: Optional[str],
+    endpoint: str | None,
     fixture_dir: Path,
     output_dir: Path,
 ) -> EvalReport:
@@ -219,7 +219,7 @@ def run_eval(
     optionally emits OTEL metrics.
     """
     run_id = str(uuid.uuid4())[:8]
-    timestamp = datetime.now(tz=timezone.utc).isoformat()
+    timestamp = datetime.now(tz=UTC).isoformat()
     logger.info("eval-harness run=%s starting", run_id)
 
     # SR-EH-001: security gate before any test execution
@@ -300,7 +300,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    endpoint: Optional[str] = args.endpoint or None
+    endpoint: str | None = args.endpoint or None
     report = run_eval(
         endpoint=endpoint,
         fixture_dir=Path(args.test_set),

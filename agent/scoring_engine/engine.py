@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from agent.app_scanner.models import PossibleFinding
@@ -35,7 +35,6 @@ from agent.scoring_engine.models import (
     Effort,
     EvidenceItem,
     Impact,
-    IncompleteGapAnalysisError,
     InputSizeLimitError,
     LawScore,
     RemediationRoadmap,
@@ -48,7 +47,6 @@ from agent.scoring_engine.models import (
     Verdict,
 )
 
-
 # ── Text utilities ────────────────────────────────────────────────────────────
 
 _STOP_WORDS: frozenset[str] = frozenset({
@@ -58,7 +56,7 @@ _STOP_WORDS: frozenset[str] = frozenset({
     "could", "should", "may", "might", "shall", "this", "that", "these",
     "those", "it", "its", "if", "not", "no", "so", "than", "then", "when",
     "where", "how", "which", "what", "who", "each", "all", "per", "via",
-    "can", "into", "over", "after", "before", "about", "than", "such",
+    "can", "into", "over", "after", "before", "about", "such",
 })
 
 
@@ -644,7 +642,7 @@ def score_project(
         attribution=ATTRIBUTION_TEXT,
         scan_metadata=scan_metadata,
         mode=mode,
-        created_at=datetime.now(tz=timezone.utc),
+        created_at=datetime.now(tz=UTC),
     )
 
 

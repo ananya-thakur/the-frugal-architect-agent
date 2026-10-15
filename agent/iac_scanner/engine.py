@@ -17,13 +17,11 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any
 
 from agent.iac_scanner.models import (
     Confidence,
     File,
     FirmFinding,
-    IaCFormat,
     ParsedResource,
     PrioritizedInventory,
     ScanContext,
@@ -31,7 +29,7 @@ from agent.iac_scanner.models import (
 )
 from agent.iac_scanner.parsers import parse_file
 from agent.iac_scanner.predicates import PredicateError, evaluate, resolve_attribute
-from agent.rubric_core.models import IaCSignal, LawDefinition, Rubric
+from agent.rubric_core.models import IaCSignal, Rubric
 
 log = logging.getLogger(__name__)
 

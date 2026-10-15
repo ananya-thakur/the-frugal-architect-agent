@@ -17,8 +17,7 @@ description used in the EvalReport.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
 from eval.models import (
     CitationCorrectnessAssertion,
@@ -66,10 +65,10 @@ class TestCaseResult:
     """Per-case evaluation results across all configured dimensions."""
 
     test_id: str
-    groundedness: Optional[AssertionResult] = None
-    citation_correctness: Optional[AssertionResult] = None
-    tool_selection: Optional[AssertionResult] = None
-    unknown_discipline: Optional[AssertionResult] = None
+    groundedness: AssertionResult | None = None
+    citation_correctness: AssertionResult | None = None
+    tool_selection: AssertionResult | None = None
+    unknown_discipline: AssertionResult | None = None
 
 
 # ── Dimension assessors ───────────────────────────────────────────────────────
@@ -238,7 +237,7 @@ def aggregate_results(case_results: list[TestCaseResult]) -> dict[str, Dimension
 
     for r in case_results:
         for dim_name, attr_name in dim_attrs:
-            attr: Optional[AssertionResult] = getattr(r, attr_name)
+            attr: AssertionResult | None = getattr(r, attr_name)
             if attr is None:
                 continue
             b = buckets[dim_name]

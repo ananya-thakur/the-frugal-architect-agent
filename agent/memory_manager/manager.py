@@ -17,8 +17,7 @@ import dataclasses
 import json
 import logging
 import re
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
 
 from agent.memory_manager.entities import (
     Finding,
@@ -147,7 +146,7 @@ class MemoryManager:
 
         stamped = dataclasses.replace(
             working,
-            last_review_at=datetime.now(timezone.utc).isoformat(),
+            last_review_at=datetime.now(UTC).isoformat(),
         )
 
         key = f"{user_id}:{project_id}"

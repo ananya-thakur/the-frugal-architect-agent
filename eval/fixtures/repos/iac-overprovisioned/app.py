@@ -11,7 +11,8 @@ Account IDs here are synthetic (123456789012) per SR-EH-001 allow-list.
 """
 
 import aws_cdk as cdk
-from aws_cdk import aws_ec2 as ec2, aws_rds as rds
+from aws_cdk import aws_ec2 as ec2
+from aws_cdk import aws_rds as rds
 from constructs import Construct
 
 

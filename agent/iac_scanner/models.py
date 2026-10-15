@@ -11,8 +11,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
-
+from pydantic import BaseModel, ConfigDict, model_validator
 
 # ── Shared confidence enum (ADR-003) ─────────────────────────────────────────
 
@@ -57,7 +56,7 @@ class PrioritizedInventory:
     repo_root: str = ""
 
     @classmethod
-    def empty(cls) -> "PrioritizedInventory":
+    def empty(cls) -> PrioritizedInventory:
         return cls(
             iac_files=(),
             app_files=(),
@@ -82,7 +81,7 @@ class ParsedResource:
 @dataclass
 class ScanContext:
     """Mutable accumulator for one scan_iac invocation (not returned to callers)."""
-    findings: list["FirmFinding"] = field(default_factory=list)
+    findings: list[FirmFinding] = field(default_factory=list)
     skipped_paths: list[str] = field(default_factory=list)
     parse_errors: list[tuple[str, str]] = field(default_factory=list)
     token_spent: int = 0
@@ -113,7 +112,7 @@ class FirmFinding(BaseModel):
     confidence: Confidence = Confidence.FIRM
 
     @model_validator(mode="after")
-    def _validate_invariants(self) -> "FirmFinding":
+    def _validate_invariants(self) -> FirmFinding:
         if not self.file_path:
             raise ValueError("file_path must not be empty (BR-05)")
         if not self.resource_id:

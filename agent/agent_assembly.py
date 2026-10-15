@@ -25,12 +25,18 @@ from typing import Any
 from agent import observability
 from agent.app_scanner.models import (
     File as AppFile,
+)
+from agent.app_scanner.models import (
     PrioritizedInventory as AppInventory,
 )
 from agent.iac_scanner import scan_iac as _scan_iac
 from agent.iac_scanner.models import (
     File as IaCFile,
+)
+from agent.iac_scanner.models import (
     IaCFormat,
+)
+from agent.iac_scanner.models import (
     PrioritizedInventory as IaCInventory,
 )
 from agent.rubric_core import get_law as _get_law
@@ -357,7 +363,9 @@ def scan_app_antipatterns_tool(repo_ref: str) -> dict[str, Any]:
         and 'summary' with scope metadata.
     """
     try:
-        from agent.app_scanner import scan_app_antipatterns as _scan_app  # local import avoids circular
+        from agent.app_scanner import (
+            scan_app_antipatterns as _scan_app,  # local import avoids circular
+        )
 
         rubric = _load_rubric()
         inventory = _build_app_inventory(repo_ref)

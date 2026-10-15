@@ -21,7 +21,7 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Any, Literal
 
 from agent.tools.repo_connector._patterns import classify_tier
 from agent.tools.repo_connector.types import (
@@ -31,8 +31,8 @@ from agent.tools.repo_connector.types import (
     RawInventory,
     RepoInventory,
     RepoRef,
-    SCMNotConnectedError,
     ScanLimits,
+    SCMNotConnectedError,
     ScopeNote,
 )
 

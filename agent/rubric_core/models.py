@@ -57,7 +57,7 @@ class Rubric(BaseModel):
     anti_pattern_signals: list[AntiPatternSignal]
 
     @model_validator(mode="after")
-    def _validate_structure(self) -> "Rubric":
+    def _validate_structure(self) -> Rubric:
         if len(self.laws) != 7:
             raise ValueError(
                 f"Rubric must contain exactly 7 laws, got {len(self.laws)}"

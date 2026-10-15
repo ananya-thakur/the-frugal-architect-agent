@@ -10,8 +10,6 @@ intentionally omit fixture content, scenario text, and raw agent responses.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
-
 
 # ── Test case models ──────────────────────────────────────────────────────────
 
@@ -52,10 +50,10 @@ class UnknownDisciplineAssertion:
 class TestCaseAssertions:
     """Container for the per-dimension assertions of one test case."""
 
-    groundedness: Optional[GroundednessAssertion] = None
-    citation_correctness: Optional[CitationCorrectnessAssertion] = None
-    tool_selection: Optional[ToolSelectionAssertion] = None
-    unknown_discipline: Optional[UnknownDisciplineAssertion] = None
+    groundedness: GroundednessAssertion | None = None
+    citation_correctness: CitationCorrectnessAssertion | None = None
+    tool_selection: ToolSelectionAssertion | None = None
+    unknown_discipline: UnknownDisciplineAssertion | None = None
 
 
 @dataclass
@@ -65,7 +63,7 @@ class TestCase:
     test_id: str
     description: str
     input_text: str
-    fixture_repo: Optional[str] = None  # Relative path to synthetic fixture repo
+    fixture_repo: str | None = None  # Relative path to synthetic fixture repo
     assertions: TestCaseAssertions = field(default_factory=TestCaseAssertions)
 
 
