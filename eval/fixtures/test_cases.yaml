@@ -1,0 +1,113 @@
+# Labeled test set for the Frugal Architect Agent evaluation harness.
+#
+# Coverage: ≥2 test cases per dimension (8 total — 2 per dimension).
+# Fixture repos in eval/fixtures/repos/ are synthetic directories with known
+# frugality issues; they contain no real credentials or account IDs.
+#
+# Dimensions:
+#   groundedness        — every finding cites a real law and real evidence
+#   citation_correctness — cited law matches the expected finding type
+#   tool_selection      — FIRM for IaC repos, POSSIBLE for app-code repos
+#   unknown_discipline  — UNKNOWN + probing question when key input is missing
+
+test_cases:
+
+  # ── groundedness (2 cases) ──────────────────────────────────────────────────
+
+  - test_id: ground-iac-repo
+    description: >
+      IaC codebase review — response must cite at least one real law with
+      evidence (file path or confidence tag).
+    input_text: "Review this repository for frugal architecture issues."
+    fixture_repo: eval/fixtures/repos/iac-overprovisioned
+    assertions:
+      groundedness:
+        expects_law_citation: true
+        expects_evidence: true
+
+  - test_id: ground-design-review
+    description: >
+      Design review of a polling service — response must cite at least one
+      real law with evidence even without a fixture repo.
+    input_text: |
+      I am building a data pipeline on AWS. The pipeline polls an SQS queue
+      every 5 seconds and writes results to RDS with no connection pooling.
+      There are no auto-scaling policies configured on the EC2 instances.
+      Please review this design for frugal architecture issues.
+    assertions:
+      groundedness:
+        expects_law_citation: true
+        expects_evidence: true
+
+  # ── citation_correctness (2 cases) ─────────────────────────────────────────
+
+  - test_id: cite-law-vi-incremental
+    description: >
+      A big-bang migration plan should be cited under Law VI
+      (Incremental Frugality).
+    input_text: |
+      We are planning to migrate our entire on-premises data warehouse to
+      Amazon Redshift in a single weekend cutover, including 50 TB of
+      historical data. Is this a frugal approach?
+    assertions:
+      citation_correctness:
+        expected_law_id: "VI"
+        expected_law_title_fragment: "Incremental"
+
+  - test_id: cite-law-iv-observability
+    description: >
+      An unmonitored system with no CloudWatch metrics should be cited under
+      Law IV (Observability and Accountability).
+    input_text: |
+      Our application has no CloudWatch metrics or alarms set up. We only
+      notice cost spikes when the AWS billing email arrives at the end of
+      the month. Is this a problem for frugal architecture?
+    assertions:
+      citation_correctness:
+        expected_law_id: "IV"
+        expected_law_title_fragment: "Observability"
+
+  # ── tool_selection (2 cases) ────────────────────────────────────────────────
+
+  - test_id: tool-iac-firm
+    description: >
+      Scanning a CDK/IaC fixture repo must produce FIRM-confidence findings
+      (IaC scan tool used, not app-code scanner).
+    input_text: "Review this repository for frugal architecture issues."
+    fixture_repo: eval/fixtures/repos/iac-overprovisioned
+    assertions:
+      tool_selection:
+        expected_confidence: FIRM
+
+  - test_id: tool-app-possible
+    description: >
+      Scanning an app-code fixture repo must produce POSSIBLE-confidence
+      findings (app-code anti-pattern scanner used, not IaC scanner).
+    input_text: "Review this repository for frugal architecture issues."
+    fixture_repo: eval/fixtures/repos/app-antipatterns
+    assertions:
+      tool_selection:
+        expected_confidence: POSSIBLE
+
+  # ── unknown_discipline (2 cases) ────────────────────────────────────────────
+
+  - test_id: unknown-law-ii-no-biz-context
+    description: >
+      Law II (Cost-Aware Architecture) requires business/revenue context.
+      Without it the agent must return UNKNOWN with a probing question —
+      not a fabricated score.
+    input_text: |
+      Score my project against all 7 laws of frugal architecture.
+      The project is a REST API running on EC2.
+    assertions:
+      unknown_discipline:
+        input_is_incomplete: true
+
+  - test_id: unknown-no-system-description
+    description: >
+      A design review with no system description must yield UNKNOWN and a
+      probing question rather than a made-up verdict.
+    input_text: "Score my system."
+    assertions:
+      unknown_discipline:
+        input_is_incomplete: true

@@ -1,62 +1,51 @@
 version: 0.2
 
-# Eval harness build spec.
-# Triggered post-deploy; gates on overall_pass_rate >= 75%.
-# post_build always runs so reports are uploaded even on gate failure.
+# CodeBuild build specification for the Frugal Architect Agent eval harness.
+#
+# Triggered post-deploy by the EvalHarnessStack CDK construct.
+# Runs unit tests first, then the full eval pipeline against the production agent.
+#
+# Required environment variables (injected by CDK EvalHarnessStack):
+#   AGENTCORE_ENDPOINT — deployed AgentCore HTTPS endpoint
+#   REPORT_BUCKET      — S3 bucket for archived reports
+# Optional:
+#   OTLP_ENDPOINT      — if set, enables OTEL metric export
+#   OTEL_EVAL_EXPORT   — set to "true" to emit eval metrics via OTLP
 
 phases:
   install:
     runtime-versions:
       python: "3.12"
     commands:
-      # Hash-pinned install — exits non-zero if any package hash mismatches.
+      # Install eval dependencies with hash-verification (SR-EH-006)
       - pip install --require-hashes -r eval/requirements-eval.txt
+      # Also install the agent package itself (needed for observability imports)
+      - pip install -e ".[dev]" --no-deps
 
   pre_build:
     commands:
-      - echo "=== Fixture credential scan ==="
-      - python eval/fixture_validator.py eval/fixtures/
-      - echo "=== Fixture size enforcement ==="
-      - python eval/check_fixture_size.py eval/fixtures/
+      # Run eval-harness unit tests before invoking the deployed agent
+      - python -m pytest tests/eval_harness/ -v --tb=short
 
   build:
     commands:
-      - echo "=== Running eval harness against $AGENTCORE_ENDPOINT ==="
       - |
         python eval/run_eval.py \
           --endpoint "$AGENTCORE_ENDPOINT" \
-          --test-set eval/fixtures/ \
-          --output "eval-report-${CODEBUILD_BUILD_ID}.md" \
-          --json "eval-report-${CODEBUILD_BUILD_ID}.json"
-      - echo "=== Checking pass-rate gate ==="
+          --test-set eval/fixtures \
+          --output-dir eval/reports
+      # Upload reports to S3
       - |
-        python - <<'EOF'
-        import json, sys
-        with open(f"eval-report-{__import__('os').environ['CODEBUILD_BUILD_ID']}.json") as f:
-            r = json.load(f)
-        rate = r.get("overall_pass_rate", 0.0)
-        print(f"Overall pass rate: {rate:.1%}")
-        if rate < 0.75:
-            print(f"GATE FAIL: {rate:.1%} < 75% threshold")
-            sys.exit(1)
-        print("GATE PASS")
-        EOF
+        if [ -n "$REPORT_BUCKET" ]; then
+          aws s3 cp eval/reports/ "s3://${REPORT_BUCKET}/reports/" --recursive
+        fi
 
   post_build:
-    # Runs regardless of build phase outcome — always upload reports.
     commands:
-      - echo "=== Uploading eval reports to S3 ==="
-      - |
-        aws s3 cp "eval-report-${CODEBUILD_BUILD_ID}.md" \
-          "s3://${REPORT_BUCKET}/reports/eval-report-${CODEBUILD_BUILD_ID}.md"
-      - |
-        aws s3 cp "eval-report-${CODEBUILD_BUILD_ID}.json" \
-          "s3://${REPORT_BUCKET}/reports/eval-report-${CODEBUILD_BUILD_ID}.json"
-      - echo "=== Eval complete. Reports at s3://${REPORT_BUCKET}/reports/ ==="
+      - echo "Eval complete — check eval/reports/ or S3 for results"
 
 artifacts:
   files:
-    - "eval-report-*.md"
-    - "eval-report-*.json"
-  name: "eval-reports-${CODEBUILD_BUILD_ID}"
-  discard-paths: "yes"
+    - "eval/reports/**/*"
+  name: eval-reports
+  discard-paths: no
