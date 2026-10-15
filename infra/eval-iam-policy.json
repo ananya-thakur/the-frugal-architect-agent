@@ -1,0 +1,41 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AgentCoreInvoke",
+      "Effect": "Allow",
+      "Action": ["bedrock-agentcore:InvokeAgent"],
+      "Resource": "arn:aws:bedrock-agentcore:*:*:agent/frugal-architect-agent*"
+    },
+    {
+      "Sid": "CloudWatchEvalMetrics",
+      "Effect": "Allow",
+      "Action": ["cloudwatch:PutMetricData"],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "cloudwatch:namespace": "frugal-architect-agent/eval"
+        }
+      }
+    },
+    {
+      "Sid": "EvalReportUpload",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject"],
+      "Resource": "arn:aws:s3:::frugal-architect-agent-eval-reports-*/reports/*"
+    },
+    {
+      "Sid": "DenyAdvisoryOnlyCostAndModelAPIs",
+      "Effect": "Deny",
+      "Action": [
+        "ce:*",
+        "budgets:*",
+        "compute-optimizer:*",
+        "pricing:*",
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
