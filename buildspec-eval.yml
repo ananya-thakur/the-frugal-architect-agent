@@ -1,0 +1,51 @@
+version: 0.2
+
+# CodeBuild build specification for the Frugal Architect Agent eval harness.
+#
+# Triggered post-deploy by the EvalHarnessStack CDK construct.
+# Runs unit tests first, then the full eval pipeline against the production agent.
+#
+# Required environment variables (injected by CDK EvalHarnessStack):
+#   AGENTCORE_ENDPOINT — deployed AgentCore HTTPS endpoint
+#   REPORT_BUCKET      — S3 bucket for archived reports
+# Optional:
+#   OTLP_ENDPOINT      — if set, enables OTEL metric export
+#   OTEL_EVAL_EXPORT   — set to "true" to emit eval metrics via OTLP
+
+phases:
+  install:
+    runtime-versions:
+      python: "3.12"
+    commands:
+      # Install eval dependencies with hash-verification (SR-EH-006)
+      - pip install --require-hashes -r eval/requirements-eval.txt
+      # Also install the agent package itself (needed for observability imports)
+      - pip install -e ".[dev]" --no-deps
+
+  pre_build:
+    commands:
+      # Run eval-harness unit tests before invoking the deployed agent
+      - python -m pytest tests/eval_harness/ -v --tb=short
+
+  build:
+    commands:
+      - |
+        python eval/run_eval.py \
+          --endpoint "$AGENTCORE_ENDPOINT" \
+          --test-set eval/fixtures \
+          --output-dir eval/reports
+      # Upload reports to S3
+      - |
+        if [ -n "$REPORT_BUCKET" ]; then
+          aws s3 cp eval/reports/ "s3://${REPORT_BUCKET}/reports/" --recursive
+        fi
+
+  post_build:
+    commands:
+      - echo "Eval complete — check eval/reports/ or S3 for results"
+
+artifacts:
+  files:
+    - "eval/reports/**/*"
+  name: eval-reports
+  discard-paths: no

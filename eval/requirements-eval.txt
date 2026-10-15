@@ -1,0 +1,21 @@
+# eval/requirements-eval.txt
+# Eval-harness dependencies — separate from the production container image.
+#
+# Generate with:  pip-compile --generate-hashes eval/requirements-eval.in
+# Install with:   pip install --require-hashes -r eval/requirements-eval.txt
+#
+# Hash-pinned supply-chain integrity per security-design-eval-harness SR-EH-006.
+# Replace PLACEHOLDER hashes by running pip-compile in a Python 3.12 environment.
+# Eval dependencies are intentionally NOT added to requirements.txt (production image).
+
+pytest==8.3.5 \
+    --hash=sha256:PLACEHOLDER_REGENERATE_WITH_PIP_COMPILE
+
+pyyaml==6.0.2 \
+    --hash=sha256:PLACEHOLDER_REGENERATE_WITH_PIP_COMPILE
+
+opentelemetry-sdk==1.27.0 \
+    --hash=sha256:PLACEHOLDER_REGENERATE_WITH_PIP_COMPILE
+
+opentelemetry-exporter-otlp-proto-grpc==1.27.0 \
+    --hash=sha256:PLACEHOLDER_REGENERATE_WITH_PIP_COMPILE

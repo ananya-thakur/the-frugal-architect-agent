@@ -1,0 +1,24 @@
+# Development-only dependencies — NEVER installed in production image (SS-02).
+# Run `pip-compile --generate-hashes requirements-dev.in -o requirements-dev.txt` to update.
+
+-r requirements.in   # include runtime deps
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+pytest>=8.3
+pytest-cov>=5.0
+pytest-asyncio>=0.24
+
+# ── Linting / formatting ──────────────────────────────────────────────────────
+ruff>=0.6
+
+# ── Type checking ─────────────────────────────────────────────────────────────
+mypy>=1.11
+
+# ── Security audit ────────────────────────────────────────────────────────────
+pip-audit>=2.7
+
+# ── Lock file generation ──────────────────────────────────────────────────────
+pip-tools>=7.4
+
+# ── CDK (infra tooling — not inside the container) ───────────────────────────
+# Install separately: cd infra && npm install
