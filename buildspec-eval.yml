@@ -1,0 +1,62 @@
+version: 0.2
+
+# Eval harness build spec.
+# Triggered post-deploy; gates on overall_pass_rate >= 75%.
+# post_build always runs so reports are uploaded even on gate failure.
+
+phases:
+  install:
+    runtime-versions:
+      python: "3.12"
+    commands:
+      # Hash-pinned install — exits non-zero if any package hash mismatches.
+      - pip install --require-hashes -r eval/requirements-eval.txt
+
+  pre_build:
+    commands:
+      - echo "=== Fixture credential scan ==="
+      - python eval/fixture_validator.py eval/fixtures/
+      - echo "=== Fixture size enforcement ==="
+      - python eval/check_fixture_size.py eval/fixtures/
+
+  build:
+    commands:
+      - echo "=== Running eval harness against $AGENTCORE_ENDPOINT ==="
+      - |
+        python eval/run_eval.py \
+          --endpoint "$AGENTCORE_ENDPOINT" \
+          --test-set eval/fixtures/ \
+          --output "eval-report-${CODEBUILD_BUILD_ID}.md" \
+          --json "eval-report-${CODEBUILD_BUILD_ID}.json"
+      - echo "=== Checking pass-rate gate ==="
+      - |
+        python - <<'EOF'
+        import json, sys
+        with open(f"eval-report-{__import__('os').environ['CODEBUILD_BUILD_ID']}.json") as f:
+            r = json.load(f)
+        rate = r.get("overall_pass_rate", 0.0)
+        print(f"Overall pass rate: {rate:.1%}")
+        if rate < 0.75:
+            print(f"GATE FAIL: {rate:.1%} < 75% threshold")
+            sys.exit(1)
+        print("GATE PASS")
+        EOF
+
+  post_build:
+    # Runs regardless of build phase outcome — always upload reports.
+    commands:
+      - echo "=== Uploading eval reports to S3 ==="
+      - |
+        aws s3 cp "eval-report-${CODEBUILD_BUILD_ID}.md" \
+          "s3://${REPORT_BUCKET}/reports/eval-report-${CODEBUILD_BUILD_ID}.md"
+      - |
+        aws s3 cp "eval-report-${CODEBUILD_BUILD_ID}.json" \
+          "s3://${REPORT_BUCKET}/reports/eval-report-${CODEBUILD_BUILD_ID}.json"
+      - echo "=== Eval complete. Reports at s3://${REPORT_BUCKET}/reports/ ==="
+
+artifacts:
+  files:
+    - "eval-report-*.md"
+    - "eval-report-*.json"
+  name: "eval-reports-${CODEBUILD_BUILD_ID}"
+  discard-paths: "yes"
